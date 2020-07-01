@@ -228,8 +228,7 @@ def main():
     opt.d_word_vec = opt.d_model
 
     if not opt.log and not opt.save_model:
-        print('No experiment result will be saved.')
-        raise
+        raise Exception('No experiment result will be saved.')
 
     if opt.batch_size < 2048 and opt.n_warmup_steps <= 4000:
         print('[Warning] The warmup steps may be not enough.\n'\
@@ -246,7 +245,7 @@ def main():
     elif opt.data_pkl:
         training_data, validation_data = prepare_dataloaders(opt, device)
     else:
-        raise
+        raise Exception("Error loading dataset")
 
     print(opt)
 
@@ -277,7 +276,7 @@ def prepare_dataloaders_from_bpe_files(opt, device):
     batch_size = opt.batch_size
     MIN_FREQ = 2
     if not opt.embs_share_weight:
-        raise
+        raise Exception("err")
 
     data = pickle.load(open(opt.data_pkl, 'rb'))
     MAX_LEN = data['settings'].max_len
