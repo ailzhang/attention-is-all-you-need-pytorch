@@ -8,7 +8,7 @@ from transformer.Layers import EncoderLayer, DecoderLayer
 __author__ = "Yu-Hsiang Huang"
 
 
-def get_pad_mask(seq, pad_idx):
+def get_pad_mask(seq, pad_idx : int):
     return (seq != pad_idx).unsqueeze(-2)
 
 
@@ -16,7 +16,7 @@ def get_subsequent_mask(seq):
     ''' For masking out the subsequent info. '''
     sz_b, len_s = seq.size()
     subsequent_mask = (1 - torch.triu(
-        torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).bool()
+        torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)).to(torch.bool)
     return subsequent_mask
 
 
@@ -62,7 +62,7 @@ class Encoder(nn.Module):
             for _ in range(n_layers)])
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
-    def forward(self, src_seq, src_mask, return_attns=False):
+    def forward(self, src_seq, src_mask, return_attns:bool=False):
 
         enc_slf_attn_list = []
 
@@ -75,8 +75,9 @@ class Encoder(nn.Module):
             enc_output, enc_slf_attn = enc_layer(enc_output, slf_attn_mask=src_mask)
             enc_slf_attn_list += [enc_slf_attn] if return_attns else []
 
-        if return_attns:
-            return enc_output, enc_slf_attn_list
+        assert(not return_attns)
+        #if return_attns:
+        #    return enc_output, enc_slf_attn_list
         return enc_output,
 
 
@@ -97,7 +98,7 @@ class Decoder(nn.Module):
             for _ in range(n_layers)])
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
-    def forward(self, trg_seq, trg_mask, enc_output, src_mask, return_attns=False):
+    def forward(self, trg_seq, trg_mask, enc_output, src_mask, return_attns:bool=False):
 
         dec_slf_attn_list, dec_enc_attn_list = [], []
 
@@ -111,8 +112,9 @@ class Decoder(nn.Module):
             dec_slf_attn_list += [dec_slf_attn] if return_attns else []
             dec_enc_attn_list += [dec_enc_attn] if return_attns else []
 
-        if return_attns:
-            return dec_output, dec_slf_attn_list, dec_enc_attn_list
+        assert(not return_attns)
+        #if return_attns:
+        #    return dec_output, dec_slf_attn_list, dec_enc_attn_list
         return dec_output,
 
 

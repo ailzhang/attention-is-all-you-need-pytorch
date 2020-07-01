@@ -276,6 +276,11 @@ def main():
         n_layers=opt.n_layers,
         n_head=opt.n_head,
         dropout=opt.dropout).to(device)
+    if opt.script:
+        print("scripted")
+        transformer = torch.jit.script(transformer)
+    else:
+        print("eager mode")
 
     optimizer = ScheduledOptim(
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
