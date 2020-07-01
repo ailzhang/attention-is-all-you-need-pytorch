@@ -17,6 +17,14 @@ from torchtext.datasets import TranslationDataset
 import transformer.Constants as Constants
 from transformer.Models import Transformer
 from transformer.Optim import ScheduledOptim
+import random
+import numpy as np
+
+torch.manual_seed(1337)
+random.seed(1337)
+np.random.seed(1337)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 __author__ = "Yu-Hsiang Huang"
 
@@ -65,10 +73,11 @@ def patch_trg(trg, pad_idx):
     trg, gold = trg[:, :-1], trg[:, 1:].contiguous().view(-1)
     return trg, gold
 
-
+last_run = None
 def train_epoch(model, training_data, optimizer, opt, device, smoothing):
     ''' Epoch operation in training phase'''
 
+    global last_run
     model.train()
     total_loss, n_word_total, n_word_correct = 0, 0, 0 
 
@@ -81,6 +90,7 @@ def train_epoch(model, training_data, optimizer, opt, device, smoothing):
 
         # forward
         optimizer.zero_grad()
+        last_run = (src_seq, trg_seq)
         pred = model(src_seq, trg_seq)
 
         # backward and update parameters
@@ -222,6 +232,8 @@ def main():
 
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-label_smoothing', action='store_true')
+    parser.add_argument('--debug', metavar='fn', default="", help="Dump outputs into file")
+    parser.add_argument('--script', default=False, help="Script the model")
 
     opt = parser.parse_args()
     opt.cuda = not opt.no_cuda
@@ -270,6 +282,10 @@ def main():
         2.0, opt.d_model, opt.n_warmup_steps)
 
     train(transformer, training_data, validation_data, optimizer, device, opt)
+    assert(last_run)
+    if opt.debug:
+        o = transformer(*last_run)
+        torch.save(o, opt.debug)
 
 
 def prepare_dataloaders_from_bpe_files(opt, device):
