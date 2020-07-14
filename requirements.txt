@@ -1,3 +1,5 @@
 dill
 tqdm
 numpy
+torchtext
+spacy

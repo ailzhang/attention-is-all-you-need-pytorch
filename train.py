@@ -5,6 +5,7 @@ This script handles the training process.
 import argparse
 import math
 import time
+import functools
 import dill as pickle
 from tqdm import tqdm
 
@@ -79,7 +80,7 @@ def train_epoch(model, training_data, optimizer, opt, device, smoothing):
 
     global last_run
     model.train()
-    total_loss, n_word_total, n_word_correct = 0, 0, 0 
+    total_loss, n_word_total, n_word_correct = 0, 0, 0
 
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
@@ -95,7 +96,7 @@ def train_epoch(model, training_data, optimizer, opt, device, smoothing):
 
         # backward and update parameters
         loss, n_correct, n_word = cal_performance(
-            pred, gold, opt.trg_pad_idx, smoothing=smoothing) 
+            pred, gold, opt.trg_pad_idx, smoothing=smoothing)
         loss.backward()
         optimizer.step_and_update_lr()
 
@@ -198,7 +199,7 @@ def train(model, training_data, validation_data, optimizer, device, opt):
                     ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu))
 
 def main():
-    ''' 
+    '''
     Usage:
     python train.py -data_pkl m30k_deen_shr.pkl -log m30k_deen_shr -embs_share_weight -proj_share_weight -label_smoothing -save_model trained -b 256 -warmup 128000
     '''
@@ -309,12 +310,12 @@ def prepare_dataloaders_from_bpe_files(opt, device):
 
     train = TranslationDataset(
         fields=fields,
-        path=opt.train_path, 
+        path=opt.train_path,
         exts=('.src', '.trg'),
         filter_pred=filter_examples_with_length)
     val = TranslationDataset(
         fields=fields,
-        path=opt.val_path, 
+        path=opt.val_path,
         exts=('.src', '.trg'),
         filter_pred=filter_examples_with_length)
 
