@@ -1,5 +1,6 @@
 dill
 tqdm
 numpy
+pytest-benchmark
 torchtext
 spacy
