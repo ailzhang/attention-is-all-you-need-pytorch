@@ -1,4 +1,4 @@
-import argparse
+from argparse import Namespace
 import math
 import time
 import dill as pickle
@@ -35,46 +35,33 @@ class Model:
     def __init__(self, device=None, jit=False):
         self.device = device
         self.jit = jit
+        self.opt = Namespace(**{
+            'batch_size': 128,
+            'd_inner_hid': 2048,
+            'd_k': 64,
+            'd_model': 512,
+            'd_word_vec': 512,
+            'd_v': 64,
+            'data_pkl': 'm30k_deen_shr.pkl',
+            'debug': '',
+            'dropout': 0.1,
+            'embs_share_weight': False,
+            'epoch': 1,
+            'label_smoothing': False,
+            'log': None,
+            'n_head': 8,
+            'n_layers': 6,
+            'n_warmup_steps': 128,
+            'cuda': True,
+            'proj_share_weight': False,
+            'save_mode': 'best',
+            'save_model': None,
+            'script': False,
+            'train_path': None,
+            'val_path': None,
+        })
 
-    def _prepare_opt(self, args):
-        parser = argparse.ArgumentParser()
-
-        parser.add_argument('-data_pkl', default='m30k_deen_shr.pkl')     # all-in-1 data pickle or bpe field
-
-        parser.add_argument('-train_path', default=None)   # bpe encoded data
-        parser.add_argument('-val_path', default=None)     # bpe encoded data
-
-        parser.add_argument('-epoch', type=int, default=1)
-        parser.add_argument('-b', '--batch_size', type=int, default=128)
-
-        parser.add_argument('-d_model', type=int, default=512)
-        parser.add_argument('-d_inner_hid', type=int, default=2048)
-        parser.add_argument('-d_k', type=int, default=64)
-        parser.add_argument('-d_v', type=int, default=64)
-
-        parser.add_argument('-n_head', type=int, default=8)
-        parser.add_argument('-n_layers', type=int, default=6)
-        parser.add_argument('-warmup','--n_warmup_steps', type=int, default=128)
-
-        parser.add_argument('-dropout', type=float, default=0.1)
-        parser.add_argument('-embs_share_weight', action='store_true')
-        parser.add_argument('-proj_share_weight', action='store_true')
-
-        parser.add_argument('-log', default=None)
-        parser.add_argument('-save_model', default=None)
-        parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
-
-        parser.add_argument('-no_cuda', action='store_true')
-        parser.add_argument('-label_smoothing', action='store_true')
-        parser.add_argument('--debug', metavar='fn', default="", help="Dump outputs into file")
-        parser.add_argument('--script', default=False, help="Script the model")
-
-        self.opt = parser.parse_args(args)
-        self.opt.cuda = not self.opt.no_cuda
-        self.opt.d_word_vec = self.opt.d_model
-
-    def get_module(self, args=[]):
-        self._prepare_opt(args)
+    def get_module(self):
         _, validation_data = prepare_dataloaders(self.opt, self.device)
         transformer = Transformer(
             self.opt.src_vocab_size,
@@ -102,15 +89,15 @@ class Model:
         return transformer, (src_seq, trg_seq)
 
     @skipIfNotImplemented
-    def eval(self, niter=1, args=[]):
-        m, example_inputs = self.get_module(args)
+    def eval(self, niter=1):
+        m, example_inputs = self.get_module()
         m.eval()
         for _ in range(niter):
             m(*example_inputs)
 
     @skipIfNotImplemented
-    def train(self, niter=1, args=[]):
-        m, _ = self.get_module(args)
+    def train(self, niter=1):
+        m, _ = self.get_module()
         optimizer = ScheduledOptim(
             optim.Adam(m.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.opt.d_model, self.opt.n_warmup_steps)
@@ -130,7 +117,7 @@ class Model:
 
 if __name__ == '__main__':
     m = Model(device='cuda', jit=False)
-    model, example_inputs = m.get_module(args=None)
+    model, example_inputs = m.get_module()
     model(*example_inputs)
-    m.train(args=None)
-    m.eval(args=None)
+    m.train()
+    m.eval()
