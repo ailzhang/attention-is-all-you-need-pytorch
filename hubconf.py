@@ -61,7 +61,6 @@ class Model:
             'val_path': None,
         })
 
-    def get_module(self):
         _, validation_data = prepare_dataloaders(self.opt, self.device)
         transformer = Transformer(
             self.opt.src_vocab_size,
@@ -81,43 +80,41 @@ class Model:
 
         if self.jit:
             transformer = torch.jit.script(transformer)
+        self.module = transformer
+
         batch = list(validation_data)[0]
         src_seq = patch_src(batch.src, self.opt.src_pad_idx).to(self.device)
-        trg_seq, _ = map(lambda x: x.to(self.device), patch_trg(batch.trg, self.opt.trg_pad_idx))
-
+        trg_seq, self.gold = map(lambda x: x.to(self.device), patch_trg(batch.trg, self.opt.trg_pad_idx))
         # We use validation_data for training as well so that it can finish fast enough.
-        return transformer, (src_seq, trg_seq)
+        self.example_inputs = (src_seq, trg_seq)
+
+    def get_module(self):
+        return self.module, self.example_inputs
 
     @skipIfNotImplemented
     def eval(self, niter=1):
-        m, example_inputs = self.get_module()
-        m.eval()
+        self.module.eval()
         for _ in range(niter):
-            m(*example_inputs)
+            self.module(*self.example_inputs)
 
     @skipIfNotImplemented
     def train(self, niter=1):
-        m, _ = self.get_module()
         optimizer = ScheduledOptim(
-            optim.Adam(m.parameters(), betas=(0.9, 0.98), eps=1e-09),
+            optim.Adam(self.module.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.opt.d_model, self.opt.n_warmup_steps)
-        training_data, _ = prepare_dataloaders(self.opt, self.device)
-        batch = list(training_data)[0]
-        src_seq = patch_src(batch.src, self.opt.src_pad_idx).to(self.device)
-        trg_seq, gold = map(lambda x: x.to(self.device), patch_trg(batch.trg, self.opt.trg_pad_idx))
         for _ in range(niter):
             optimizer.zero_grad()
-            pred = m(src_seq, trg_seq)
+            pred = self.module(*self.example_inputs)
 
             loss, n_correct, n_word = cal_performance(
-                pred, gold, self.opt.trg_pad_idx, smoothing=self.opt.label_smoothing)
+                pred, self.gold, self.opt.trg_pad_idx, smoothing=self.opt.label_smoothing)
             loss.backward()
             optimizer.step_and_update_lr()
 
 
 if __name__ == '__main__':
     m = Model(device='cuda', jit=False)
-    model, example_inputs = m.get_module()
-    model(*example_inputs)
-    m.train()
-    m.eval()
+    module, example_inputs = m.get_module()
+    module(*example_inputs)
+    m.train(niter=1)
+    m.eval(niter=1)
