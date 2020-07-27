@@ -36,7 +36,7 @@ class Model:
         self.device = device
         self.jit = jit
 
-    def _prepare_opt(self):
+    def _prepare_opt(self, args):
         parser = argparse.ArgumentParser()
 
         parser.add_argument('-data_pkl', default='m30k_deen_shr.pkl')     # all-in-1 data pickle or bpe field
@@ -69,12 +69,12 @@ class Model:
         parser.add_argument('--debug', metavar='fn', default="", help="Dump outputs into file")
         parser.add_argument('--script', default=False, help="Script the model")
 
-        self.opt = parser.parse_args()
+        self.opt = parser.parse_args(args)
         self.opt.cuda = not self.opt.no_cuda
         self.opt.d_word_vec = self.opt.d_model
 
-    def get_module(self):
-        self._prepare_opt()
+    def get_module(self, args=[]):
+        self._prepare_opt(args)
         _, validation_data = prepare_dataloaders(self.opt, self.device)
         transformer = Transformer(
             self.opt.src_vocab_size,
@@ -102,15 +102,15 @@ class Model:
         return transformer, (src_seq, trg_seq)
 
     @skipIfNotImplemented
-    def eval(self, niter=1):
-        m, example_inputs = self.get_module()
+    def eval(self, niter=1, args=[]):
+        m, example_inputs = self.get_module(args)
         m.eval()
         for _ in range(niter):
             m(*example_inputs)
 
     @skipIfNotImplemented
-    def train(self, niter=1):
-        m, _ = self.get_module()
+    def train(self, niter=1, args=[]):
+        m, _ = self.get_module(args)
         optimizer = ScheduledOptim(
             optim.Adam(m.parameters(), betas=(0.9, 0.98), eps=1e-09),
             2.0, self.opt.d_model, self.opt.n_warmup_steps)
@@ -130,7 +130,7 @@ class Model:
 
 if __name__ == '__main__':
     m = Model(device='cuda', jit=False)
-    model, example_inputs = m.get_module()
+    model, example_inputs = m.get_module(args=None)
     model(*example_inputs)
-    m.train()
-    m.eval()
+    m.train(args=None)
+    m.eval(args=None)
