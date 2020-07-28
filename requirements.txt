@@ -1,5 +1,4 @@
 dill
 tqdm
 numpy
-torchtext==0.6.0
 spacy
