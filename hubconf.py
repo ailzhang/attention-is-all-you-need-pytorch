@@ -23,14 +23,6 @@ np.random.seed(1337)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-def skipIfNotImplemented(func):
-    def wrapper(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except NotImplementedError:
-            print('skipped since {} is not implemented'.format(func.__name__))
-    return wrapper
-
 class Model:
     def __init__(self, device=None, jit=False):
         self.device = device
@@ -91,13 +83,11 @@ class Model:
     def get_module(self):
         return self.module, self.example_inputs
 
-    @skipIfNotImplemented
     def eval(self, niter=1):
         self.module.eval()
         for _ in range(niter):
             self.module(*self.example_inputs)
 
-    @skipIfNotImplemented
     def train(self, niter=1):
         optimizer = ScheduledOptim(
             optim.Adam(self.module.parameters(), betas=(0.9, 0.98), eps=1e-09),
